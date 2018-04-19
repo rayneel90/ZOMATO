@@ -1,0 +1,63 @@
+{% load staticfiles %}
+
+
+<html>
+  <head>
+    <title>DBView | ChatBot</title>
+    <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+    <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+	<script src="{% static 'dbview.js' %}"></script>
+  </head>
+  <body>
+    <div class='col-xs-10 col-md-offset-1'>
+      <div class='col-xs-6'>
+        <div class='panel panel-default'>
+          <div class="panel-heading"><center>Query</center></div>
+          <div class="panel-body">
+            <div class="text-center">{{query.message}}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-xs-6">
+        <div class='panel panel-default'>
+          <div class="panel-heading"><center>Response</center></div>
+          <div class="panel-body">
+            <div class="text-center">{{resp.message | safe}}</div>
+          </div>
+          </div>
+      </div>
+    </div>
+    <div class='col-xs-10 col-md-offset-1'>
+      <div class='panel panel-default'>
+        <div class="panel-heading"><center>What is wrong with the response?</center></div>
+        <div class="panel-body">
+          <div class="btn-group btn-group-justified panel ">
+            <a data-toggle="tab" href="#intent" class="btn btn-default">Incorrect intent Classification</a>
+            <a data-toggle="tab" href="#fnm" class="btn btn-default">Incorrect fund name detection</a>
+            <a data-toggle="tab" href="#ftype" class="btn btn-default">Incorrect fund type detection</a>
+            <a data-toggle="tab" href="#noerr" class="btn btn-default">No Error</a>
+          </div>
+          <div class="tab-content">
+            <div id="intent" class="tab-pane fade">
+            </div>
+            <div id="fnm" class="tab-pane fade">
+            </div>
+            <div id="ftype" class="tab-pane fade">
+            </div>
+            <div id="noerr" class="tab-pane fade border-dark rounded panel panel-primary in">
+              <form method = 'get'>
+                <div class="form-group">
+                   <label for="email">Intent</label>
+                  <input type="text" class = 'form-control' readonly value="{{query.intent}}">
+                </div>
+
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+      </body>
+</html>
