@@ -1,0 +1,293 @@
+---
+title: "Commercial Vehicle PD model"
+output: html_notebook
+author: Nilabja Ray
+---
+### Variable Description
+```{r include=FALSE}
+rm(list=ls())
+cat('\014')
+library(data.table)
+getwd()
+flist = file.path('data','monthly_report',list.files(file.path('data','monthly_report')))
+dat = lapply(flist,fread,colClass='character')
+dat = do.call(rbind,dat)
+```
+
+#### 1. ApplicationID, AGREEMENT_NO
+- **Type:** Numeric/Alphanumeric string
+- **Description:** Primary identifier for individual data-points. 
+```{r}
+print(dat[,uniqueN(ApplicationID),])
+print(dat[,uniqueN(AGREEMENT_NO),])
+
+```
+#### 2. final_cif_no
+- **Type:** Numeric String 
+- **Description:** Primary identifier for Customers.  
+```{r}
+print(dat[,uniqueN(final_cif_no),])
+dat[,.(acc_count=uniqueN(ApplicationID)),by=final_cif_no][order(-acc_count)]
+```
+#### 3. Location
+- **Type:** String
+- **Description:** City/Town name
+
+```{r}
+dat[,.(acc_count=uniqueN(ApplicationID)),by=Location][order(-acc_count)]
+```
+
+#### 4. state
+- **Type:** String
+- **Description:** Name of state where loan was disbursed 
+```{r}
+dat[,.(acc_count=uniqueN(ApplicationID)),by=state][order(-acc_count)]
+```
+
+#### 5. CV_Old_New_flag
+- **Type:** Bool
+- **Description:** Whether new or resell vehicle. Only New vehicle data to be used.  
+```{r}
+unique(dat[,CV_Old_New_flag])
+dat[CV_Old_New_flag=='',CV_Old_New_flag:='Old']
+dat=dat[CV_Old_New_flag=='New']
+```
+#### 6. Product
+- **Type:** Factor
+- **Description:** Types of Loan Product. 4 different levels. 
+```{r}
+dat[,.(account_count=uniqueN(ApplicationID)),by=Product]
+```
+#### 7. Loan_purpose
+- **Type:** Factor
+- **Description:** Purpose of the loan. 10 levels  
+```{r}
+dat[,.(acc_count=uniqueN(ApplicationID)),by=Loan_purpose][order(-acc_count)]
+
+```
+
+#### 8. PROMOTIONDESC
+- **Type:** Factor
+- **Description:** Description of the loan-taker.  
+```{r}
+unique(dat[,PROMOTIONDESC])
+```
+
+#### 9. CONSTITUTION
+- **Type:** Factor
+- **Description:** Type of the customer (Indiv, HUF, Proprietor, pvt ltd etc). Total 12 levels. 
+```{r}
+dat[,uniqueN(ApplicationID),by=CONSTITUTION]
+```
+#### 10. DISBDT
+- **Type:** Date 
+- **Description:** Date of disbursal of the loan. 
+DISBDT is unique for each account. 
+
+```{r}
+dat[,DISBDT:=as.Date(DISBDT,format='%d-%m-%Y')]
+```
+
+##### Yearly distribution of disbursal
+```{r}
+dat[,.(account_count=uniqueN(ApplicationID)), by=year(DISBDT)][order(year)]
+```
+
+#### 11. due_date
+- **Type:** Date
+- **Description:** Date when the next EMI is due 
+```{r}
+dat[due_date=='',due_date:=NA]
+dat[,due_date:=as.Date(due_date,format='%d-%m-%Y')]
+```
+
+#### 12. DISB_AMT
+- **Type:** Numeric
+- **Description:** Amount Disbursed. 
+```{r}
+dat[,DISB_AMT:=as.numeric(DISB_AMT)]
+temp = dat[,.(amnt=mean(DISB_AMT)),by=ApplicationID]
+hist(temp[,amnt],breaks=200,freq = FALSE)
+```
+
+#### 13. roi
+- **Type:** Numeric
+- **Description:** Rate of interest. For accounts with fixed rate, this will be constant. For Float roi accounts, roi is diff for every month. 
+```{r}
+dat[,roi:=as.numeric(roi)]
+summary(dat[,roi])
+```
+
+
+#### 14. MANUFACTURERDESC
+- **Type:** String
+- **Description:** Name of Vehicle Manufacturer
+```{r}
+dat[,.(acc_count=uniqueN(ApplicationID)),by=MANUFACTURERDESC][order(-acc_count)]
+```
+
+#### 15. CATGDESC
+- **Type:** Factor
+- **Description:** Category of the Vehicle. 13 level
+```{r}
+dat[,.(acc_count=uniqueN(ApplicationID)),by=CATGDESC][order(-acc_count)]
+```
+
+
+#### 16. ASSETCOST
+- **Type:** Numeric
+- **Description:** Cost of the Vehicle. 
+
+```{r}
+dat[,ASSETCOST:=as.numeric(ASSETCOST)]
+temp = dat[,.(amnt=mean(ASSETCOST)),by=ApplicationID]
+hist(temp[,amnt],breaks=200,freq = FALSE)
+```
+
+#### 17. asset_level
+- **Type:** Factor
+- **Description:**  Classified in three levels based on the Price, make n model of the vehicle. Contains missing observations. 
+```{r}
+dat[,.(acc_count=uniqueN(ApplicationID)),asset_level][order(-acc_count)]
+```
+#### 18. woff_flag
+- **Type:** Bool
+- **Description:** Whether part of the loan was written off or not.  
+```{r}
+dat[,woff_flag:=woff_flag=='1']
+dat[,.(acc_count=uniqueN(ApplicationID)),by=woff_flag]
+```
+
+#### 19. POS
+- **Type:** Numeric 
+- **Description:** Principal OutStanding. Part of the principal that is still unpaid. 
+```{r}
+dat[,POS:=as.numeric(POS)]
+```
+#### 20. DPD_Days
+- **Type:** Integer
+- **Description:** Days Past Delinquency
+```{r}
+dat[,DPD_Days:=as.integer(DPD_Days)]
+dat[,.(acc_count=uniqueN(ApplicationID)),by=DPD_Days][order(DPD_Days)]
+```
+#### 21. NPA_since_date
+- **Type:** Date
+- **Description:** Date when the account first became NPA. Mu
+```{r}
+dat[NPA_since_date=='',NPA_since_date:=NA]
+dat[,NPA_since_date:=as.Date(NPA_since_date,format='%d-%m-%Y')]
+```
+#### 22. Asof 
+- **Type:** Date 
+- **Description:** Snapshot date
+```{r}
+dat[,Asof:=as.Date(Asof,format='%d-%m-%Y')]
+```
+
+#### 23. Bounces
+- **Type:** Bool
+- **Description:** Flag whether any of the customers cheque/SI have bounced or not 
+```{r}
+dat[,Bounces:=Bounces!='']
+```
+
+#### 24. closed_status
+- **Type:** 
+- **Description:** 
+```{r}
+dat[,.(acc_count = uniqueN(ApplicationID)),by=closed_status]
+dat[,closed_status:=closed_status=='C']
+```
+
+#### 25. Restructure_status
+- **Type:** 
+- **Description:** 
+```{r}
+dat[,Restructure_status:=Restructure_status=='Restructure']
+```
+
+#### 26. dq
+- **Type:** Factor 
+- **Description:** Levels of Delinquincy 
+```{r}
+unique(dat[,dq])
+```
+#### 27. ever_x, ever_30, ever_60
+- **Type:** Bool
+- **Description:** Whether the account has ever been to dq_x, dq_30 and dq_60 ever.  
+```{r}
+dat[,ever_x:=ever_x=='1']
+dat[,ever_30:=ever_30=='1']
+dat[,ever_60:=ever_60=='1']
+```
+
+#### 28. total_bounces
+- **Type:** Integer
+- **Description:** Total Number of times a cheque/SI has bounced
+```{r}
+dat[,total_bounces:=as.integer(total_bounces)]
+summary(dat[,total_bounces])
+```
+
+#### 29. nonstarter, Quick_Mortality_Flag
+- **Type:** Bool
+- **Description:** 
+
+```{r}
+dat[,nonstarter:=nonstarter=="1"]
+dat[,Quick_Mortality_Flag:=Quick_Mortality_Flag!=""]
+dat[,.(acc_count=uniqueN(ApplicationID)),nonstarter]
+dat[,.(acc_count=uniqueN(ApplicationID)),Quick_Mortality_Flag]
+```
+
+#### 30. Presentations
+- **Type:** Bool
+- **Description:** Whether a cheque was presented or not.
+
+```{r}
+dat[,Presentations:=Presentations=='1']
+```
+
+#### Valiable Selection
+
+```{r}
+a=c("ApplicationID",
+    "AGREEMENT_NO",
+"final_cif_no",
+"Location",
+"state",
+"CV_Old_New_flag",
+"Product",
+"Loan_purpose",
+"PROMOTIONDESC",
+"CONSTITUTION",
+"DISBDT",
+"due_date",
+"DISB_AMT",
+"roi",
+"MANUFACTURERDESC",
+"CATGDESC",
+"ASSETCOST",
+"asset_level",
+"woff_flag",
+"POS",
+"DPD_Days",
+"Assets_Classification",
+"NPA_since_date",
+"Asof",
+"Bounces",
+"closed_status",
+"Restructure_status",
+"dq",
+"ever_60",
+"ever_30",
+"ever_x",
+"total_bounces",
+"Quick_Mortality_Flag",
+"Presentations")
+dat2 = dat[,a,with=FALSE]
+saveRDS(dat2,'data/cleaned_master_data.RDS')
+```
+
+

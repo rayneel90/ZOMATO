@@ -1,0 +1,266 @@
+---
+title: "Descriptive Analysis"
+author: "Nilabja Ray"
+date: "8 May 2018"
+output: html_notebook
+---
+
+
+
+```{r setup, include=FALSE}
+rm(list=ls())
+cat('\014')
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = normalizePath('..'))
+library(data.table)
+library(ggplot2)
+library(zoo)
+library(stringr)
+```
+
+### Variable Summaries
+```{r load_data}
+dat = readRDS('data/finaldatajan17.RDS')
+```
+
+#### 1. Location
+It is a factor with `r uniqueN(dat$Location)` levels. The interaction with target variable is as shown below:
+```{r location, paged.print=TRUE}
+dat[,.(acc_count = .N,target_positive = sum(target),perc=sum(target)*100/.N),Location][order(-acc_count,-perc)]
+```
+The Number of levels is too high to have clear idea about impact of location on target. 
+
+#### 2. State
+Factor with `r uniqueN(dat$State)` levels. 
+
+```{r state}
+dat[,.(acc_count = .N,target_positive = sum(target),perc=sum(target)*100/.N),State][order(-acc_count,-perc)]
+
+```
+The rate of delinquincy is higher for Delhi, Maharashtra and Karnataka. Punjab also is high, but sample size is too small. 
+
+**Only state will be used in the model - location will not be used.**
+
+We used this variable to create the flag `isAgri`. 
+```{r}
+dat[,.(acc_count = .N,target_positive = sum(target),perc=sum(target)*100/.N),AgriFlag][order(-acc_count,-perc)]
+```
+
+i.e. Non-agri products have higher default rate than agri products.
+
+#### 3. LoanPurpose
+Factor with `r uniqueN(dat[,Loan_purpose])` levels. 
+
+```{r}
+dat[,.(acc_count = .N,target_positive = sum(target),perc=sum(target)*100/.N),LoanPurpose][order(-acc_count,-perc)]
+```
+
+Loan for new body has higher dq rate than other purposes. 
+
+#### 4. BorrowerDesc
+Factor with `r uniqueN(dat[,BorrowerDesc])` levels. 
+
+```{r}
+dat[,.(acc_count = .N,target_positive = sum(target),perc=sum(target)*100/.N),BorrowerDesc][order(-acc_count,-perc)]
+```
+
+TRANSPORTER A CATEGORY has exceptionally high default potential. 
+
+#### 5. BorrowerType
+
+
+```{r}
+dat[,.(acc_count = .N,target_positive = sum(target), perc=sum(target)*100/.N), 
+    BorrowerType][order(-acc_count,-perc)]
+
+```
+
+#### 6. DisbAmt
+
+Continuous variable. Can be binned to convert to categorical. 
+**Summary**
+```{r}
+summary(dat$DisbAmt)
+```
+
+In order to check the impact of DisbAmt on our target varibale, we conduct a non-parametric comparison of the variable for target=0 and target=1. 
+
+```{r}
+wilcox.test(DisbAmt~target,data=dat)
+```
+
+Since the P-value is small enough, we conclude that the DISB_AMT has some impact on the target. For better visualisation, a violin plot is created. 
+
+```{r}
+ggplot(dat,aes(target,DisbAmt))+geom_violin(scale = "count")
+```
+
+#### 7. ROI
+Numeric variable 
+
+```{r}
+summary(dat$ROI)
+```
+
+** Mann-Whitney U Test **
+```{r}
+wilcox.test(ROI~target,data=dat)
+```
+
+Since there is no significant difference in the roi for target 0 and target 1, it will not be included in the model. 
+
+#### 10. ManufacturerDesc
+Factor - has `r uniqueN(dat$ManufacturerDesc)` levels. 
+
+```{r}
+dat[,.(acc_count = .N,target_positive=sum(target),perc=sum(target)*100/.N),
+    ManufacturerDesc][order(-perc)]
+```
+It is found that the default rate is higher for Private Body Builders. 
+
+#### 11. VehicleCategory
+Factor with `r uniqueN(dat[,VehicleCategory])` levels. 
+
+```{r}
+dat[,.(acc_count = .N,target_positive=sum(target),perc=sum(target)*100/.N),
+    VehicleCategory][order(-perc)]
+```
+
+** Joint Distribution of VehicleCategory and ManufacturerDesc
+
+```{r fig.height=8, fig.width=12}
+tempdat= dat[,.(acc_count =.N, target_positive=sum(target), perc=sum(target)*100/.N),
+             by=.(ManufacturerDesc,VehicleCategory)]
+a = ggplot(data=tempdat,aes(x=ManufacturerDesc,y=VehicleCategory))+
+  geom_point(aes(size=acc_count,fill=perc),shape=21,alpha=.9)+
+  scale_size(range = c(5, 20)) +
+  theme(axis.text.x = element_text(angle=60,hjust=1))+
+  scale_x_discrete(labels=function(x) str_wrap(x,15))
+a+scale_fill_distiller(palette = "RdYlGn")
+
+```
+
+
+#### 12. AssetCost
+
+Continuous variable
+
+```{r}
+summary(dat[,AssetCost])
+```
+
+**Loan to Asset Cost Ratio**
+
+Created the new column - continuous
+```{r}
+dat[,LAR:=DisbAmt/AssetCost]
+summary(dat[,LAR])
+dat[,mean(LAR),target]
+wilcox.test(LAR~target,data=dat)
+wilcox.test(DisbAmt~target,data=dat)
+wilcox.test(AssetCost~target,data=dat)
+```
+LAR has significant impact on target. 
+
+#### 13. AssetLevel
+
+```{r}
+dat[,.(acc_count = .N,target_positive=sum(target),perc=sum(target)*100/.N),
+    AssetLevel][order(-perc)]
+```
+
+#### 14. POS
+
+```{r}
+summary(dat[target==TRUE,POS])
+summary(dat[target==FALSE,POS])
+wilcox.test(POS~target,data=dat)
+
+```
+
+#### 15. DPDDays
+
+```{r}
+summary(dat[,DPDDays])
+summary(dat[target==TRUE,DPDDays])
+summary(dat[target==FALSE,DPDDays])
+```
+
+
+
+```{r}
+dat[,.N,DPDDays]
+```
+
+#### 16. BounceFlag
+
+
+```{r}
+addmargins(prop.table(xtabs(N~BounceFlag+target,data=dat[,.N,.(target,BounceFlag)]),margin = 1),2)
+```
+
+#### 17. ever60Flag, ever30Flag, everXFlag
+
+```{r}
+temp_tot = dat[,.(.N,target_positive=sum(target))]
+temp_x = dat[everXFlag==TRUE,.(.N,target_positive=sum(target))]
+temp_30 = dat[ever30Flag==TRUE,.(.N,target_positive=sum(target))]
+temp_60 = dat[ever60Flag==TRUE,.(.N,target_positive=sum(target))]
+temp=rbind(temp_tot,temp_x,temp_30,temp_60)
+
+temp[,perc:=100*target_positive/N]
+rm(temp_30,temp_60,temp_tot,temp_x)
+cbind(filter=c('None','ever_x','ever_30','ever_60'),temp)
+```
+
+#### 18. BounceCount
+
+```{r}
+summary(dat[,BounceCount])
+temp=dat[,.(.N,target_positive=sum(target)),cut(BounceCount,breaks = c(0,1,10,20,30,100),right = FALSE)]
+temp[,perc:=target_positive*100/N][order(-perc)]
+```
+
+#### 19. AgriFlag
+
+```{r}
+addmargins(prop.table(xtabs(~AgriFlag+target,data=dat),1),2)
+```
+
+#### 20. BorrowerCategory
+
+
+```{r}
+dat[,.(acc_count = .N,target_positive=sum(target),perc=sum(target)*100/.N),
+    BorrowerCategory][order(-perc)]
+```
+
+#### 21. CashPayFlag
+
+```{r}
+dat[,.(acc_count = .N,target_positive=sum(target),perc=sum(target)*100/.N),
+    CashPayFlag][order(-perc)]
+```
+
+#### 22. BR6m,BR3m,BRLife
+
+```{r}
+
+summary(dat[CashPayFlag==FALSE,BR6m])
+summary(dat[CashPayFlag==FALSE,BR3m])
+quantile(dat[,BR6m],c(1:10)/10,na.rm = TRUE)
+sum(is.na(dat[CashPayFlag==FALSE,BR6m]))
+sum(is.na(dat[CashPayFlag==FALSE,BR3m]))
+dat[,.N,BR6m]
+```
+
+
+
+23. MOB
+
+
+```{r}
+summary(dat$MOB)
+summary(dat[target==TRUE,MOB])
+summary(dat[target==FALSE,MOB])
+```
