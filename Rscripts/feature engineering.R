@@ -10,6 +10,7 @@ outsample_dat = readRDS('data/raw_outsample.RDS')
 #                  Check Importance of levels and variables                   #
 ###############################################################################
 dat_for_model[,target:=as.integer(target)]
+outsample_dat[,target:=as.integer(target)]
 index=createDataPartition(dat_for_model$target,p=0.8,list=F)
 train = dat_for_model[index,]
 test = dat_for_model[-index]

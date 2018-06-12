@@ -91,14 +91,14 @@ modelControls=trainControl(method = "repeatedcv",
                            verboseIter = TRUE)
 
 model_dt = train(train_X,train_Y, method = 'rpart',
-                 trControl = modelControls, tuneLength = 15, metric = 'accuracy')
+                 trControl = modelControls, tuneLength = 15, metric = 'ROC')
 cm_dt = confusionMatrix(data=predict(model_dt,newdata = test_X),reference = as.factor(test_Y),positive = 'X1')
 pred_dt = predict(model_dt,newdata = test_X,type = 'prob')
 ROC_dt = roc(test_Y,pred_dt$X0)
 perf_dt = data.table(thres = ROC_dt$thresholds,Spec = ROC_dt$specificities, Sens = ROC_dt$sensitivities)
 perf_dt[,temp:=Spec+Sens]
 View(perf_dt)
-fit = as.factor(ifelse(pred_dt$x1>perf_dt[order(-temp)][1,1],'X1','X0'))
+fit = as.factor(ifelse(pred_dt$X1>perf_dt[order(-temp)][1,1],'X1','X0'))
 cm_dt_modified = confusionMatrix(data=fit,reference = test_Y)
 
 
@@ -113,14 +113,14 @@ modelControls=trainControl(method = "repeatedcv",
                            allowParallel = TRUE)
 Sys.time()
 model_rf = train(train_X,train_Y, method = 'rf',
-                    trControl = modelControls,tuneLength = 12, metric = 'Spec')
+                    trControl = modelControls,tuneLength = 5, metric = 'ROC')
 cm_rf = confusionMatrix(data=predict(model_rf,newdata = test_X),reference = as.factor(test_Y),positive = 'X1')
 pred_rf = predict(model_rf,newdata = test_X,type = 'prob')
 ROC_rf = roc(test_Y,pred_rf$X0)
 perf_rf = data.table(thres = ROC_rf$thresholds,Spec = ROC_rf$specificities, Sens = ROC_rf$sensitivities)
 perf_rf[,temp:=Spec+Sens]
 View(perf_rf)
-fit = as.factor(ifelse(pred_rf$x1>perf_rf[order(-temp)][1,1],'X1','X0'))
+fit = as.factor(ifelse(pred_rf$X1>perf_rf[order(-temp)][1,1],'X1','X0'))
 cm_rf_modified = confusionMatrix(data=fit,reference = test_Y)
 
 
@@ -136,13 +136,16 @@ modelControls=trainControl(method = "repeatedcv",
 Sys.time()
 model_gbm = train(train_X,train_Y, method = 'gbm',
                  trControl = modelControls,tuneLength = 5, metric = 'ROC')
-cm_gbm = confusionMatrix(data=predict(model_gbm,newdata = test_X),reference = as.factor(test_Y),positive = 'X1')
+cm_gbm = confusionMatrix(data=predict(model_gbm,newdata = test_X),
+                         reference = as.factor(test_Y),positive = 'X1')
 pred_gbm = predict(model_gbm,newdata = test_X,type = 'prob')
 ROC_gbm = roc(test_Y,pred_gbm$X0)
-perf_gbm = data.table(thres = ROC_gbm$thresholds,Spec = ROC_gbm$specificities, Sens = ROC_gbm$sensitivities)
+perf_gbm = data.table(thres = ROC_gbm$thresholds,
+                      Spec = ROC_gbm$specificities,
+                      Sens = ROC_gbm$sensitivities)
 perf_gbm[,temp:=Spec+Sens]
 View(perf_gbm)
-fit = as.factor(ifelse(pred_gbm$x1>perf_gbm[order(-temp)][1,1],'X1','X0'))
+fit = as.factor(ifelse(pred_gbm$X1>perf_gbm[order(-temp)][1,1],'X1','X0'))
 cm_gbm_modified = confusionMatrix(data=fit,reference = test_Y)
 
 
@@ -158,15 +161,19 @@ modelControls=trainControl(method = "repeatedcv",
                            verboseIter = TRUE)
 Sys.time()
 model_xgb = train(train_X,train_Y, method = 'xgbTree',
-                  trControl = modelControls,tuneLength = 40, metric = 'ROC')
+                  trControl = modelControls,tuneLength = 5, metric = 'ROC')
 cm_xgb = confusionMatrix(data=predict(model_xgb,newdata = test_X),reference = as.factor(test_Y),positive = 'X1')
-pred_xgb = predict(model_xgb,newdata = test_X,type = 'prob')
-ROC_xgb = roc(test_Y,pred_xgb$X0)
+pred_xgb = predict(model_xgb,newdata = train_X,type = 'prob')
+ROC_xgb = roc(train_Y,pred_xgb$X1)
 perf_xgb = data.table(thres = ROC_xgb$thresholds,Spec = ROC_xgb$specificities, Sens = ROC_xgb$sensitivities)
 perf_xgb[,temp:=Spec+Sens]
 View(perf_xgb)
-fit = as.factor(ifelse(pred_xgb$x1>perf_xgb[order(-temp)][1,1],'X1','X0'))
-cm_xgb_modified = confusionMatrix(data=fit,reference = test_Y)
+pred_xgb = predict(model_xgb,newdata = test_X,type = 'prob')
+fit = as.factor(ifelse(pred_xgb$X1>perf_xgb[order(-temp)]$thres[1],'X1','X0'))
+cm_xgb_modified = confusionMatrix(data=fit,reference = test_Y,positive = 'X1')
 
 
-
+saveRDS(model_rf,'model/model_rf.rds')
+saveRDS(model_dt,'model/model_dt.rds')
+saveRDS(model_gbm,'model/model_gbm.rds')
+saveRDS(model_xgb,'model/model_xgb.rds')

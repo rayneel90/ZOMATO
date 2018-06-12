@@ -17,8 +17,8 @@ colnames(master)=c('ApplID','AggrNo','CIF','Location','State','OldNewFlag',
 #                      Set the time Period                                    #
 ###############################################################################
 
-TARGETDT=as.Date('2017-01-01')   #train
-#TARGETDT=as.Date('2017-07-01')   # outsample test
+#TARGETDT=as.Date('2017-01-01')   #train
+TARGETDT=as.Date('2017-07-01')   # outsample test
 snapshotjan17 =  master[AsOf==TARGETDT]
 ###############################################################################
 #                                 Filters                                     #
@@ -120,8 +120,8 @@ factor_cols = c('Location', 'State', 'LoanPurpose', 'BorrowerDesc',
                 'ever30Flag', 'everXFlag', 'AgriFlag', 'BorrowerCategory','CashPayFlag')
 finaldat[,(factor_cols):=lapply(.SD,as.factor),.SDcols=factor_cols]
 
-saveRDS(finaldat,file='data/raw_train.RDS')
-#saveRDS(finaldat,file='data/raw_outsample.RDS')
+#saveRDS(finaldat,file='data/raw_train.RDS')
+saveRDS(finaldat,file='data/raw_outsample.RDS')
 
 ###############################################################################
 #                      CIBIL data processing (Not Yet Complete)               #
